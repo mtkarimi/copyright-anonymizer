@@ -3,3 +3,4 @@ spacy~=3.7.4
 pandas~=2.2.1
 pydantic~=2.6.3
 tqdm~=4.66.2
+st-annotated-text~=4.0.1
