@@ -2,19 +2,14 @@ import json
 import logging
 import os
 import re
-from typing import List, Dict, Set, Any, Optional
-import csv
 import zipfile
-import spacy
+from typing import List, Dict, Set, Optional
+
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from spacy import Language
-from tqdm import tqdm
-from io import BytesIO  # Using BytesIO to simulate file operations in memory
-import re
 
 from config import (
-    DEFAULT_CHUNK_SIZE, DEFAULT_CHUNK_OVERLAP, CHECKPOINT_PATH,
-    REPLACEMENTS_CONFIG, OUTPUT_FILE_PATH, apply_replacements
+    DEFAULT_CHUNK_SIZE, DEFAULT_CHUNK_OVERLAP, CHECKPOINT_PATH
     )
 
 # Setup basic configuration for logging
@@ -23,6 +18,7 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 import streamlit as st
 
 import tempfile
+
 
 def handle_uploaded_file(uploaded_file):
     """
@@ -40,7 +36,7 @@ def handle_uploaded_file(uploaded_file):
 
 
 def split_text(file_path: str, chunk_size: int = DEFAULT_CHUNK_SIZE, chunk_overlap: int = DEFAULT_CHUNK_OVERLAP) -> \
-List[str]:
+        List[str]:
     """Attempt to open and read the file, splitting its content into chunks."""
     try:
         with open(file_path, 'r', encoding='utf-8') as file:
@@ -94,13 +90,20 @@ def checkpoint_operations(processed_chunks: int, entities: Dict[str, Set[str]], 
         if os.path.exists(checkpoint_path):
             with open(checkpoint_path) as f:
                 return json.load(f)
-        return {"processed_chunks": 0, "people": [], "companies": []}
+        return {
+                "processed_chunks": 0,
+                "people": [],
+                "companies": []
+                }
 
-def process_text(file_path: str, nlp: Language, checkpoint_path: str = CHECKPOINT_PATH,
-                 custom_removals: Optional[Dict[str, List[Dict[str, str]]]] = None,
-                 chunk_size: int = DEFAULT_CHUNK_SIZE, chunk_overlap: int = DEFAULT_CHUNK_OVERLAP,
-                 reset: bool = False, processing_percentage: int = 100,
-                 progress_bar=None) -> Dict[str, List[str]]:
+
+def process_text(
+        file_path: str, nlp: Language, checkpoint_path: str = CHECKPOINT_PATH,
+        custom_removals: Optional[Dict[str, List[Dict[str, str]]]] = None,
+        chunk_size: int = DEFAULT_CHUNK_SIZE, chunk_overlap: int = DEFAULT_CHUNK_OVERLAP,
+        reset: bool = False, processing_percentage: int = 100,
+        progress_bar=None
+        ) -> Dict[str, List[str]]:
     """Extract entities from text with optional checkpointing and custom removals."""
     if reset:
         checkpoint_operations(processed_chunks=0, entities={}, checkpoint_path=checkpoint_path, operation="reset")
@@ -110,7 +113,10 @@ def process_text(file_path: str, nlp: Language, checkpoint_path: str = CHECKPOIN
         return {}
 
     chunks_to_process = len(texts) * processing_percentage // 100
-    processed_chunks, entities = 0, {"people": set(), "companies": set()}
+    processed_chunks, entities = 0, {
+            "people": set(),
+            "companies": set()
+            }
     checkpoint = checkpoint_operations(processed_chunks, entities, checkpoint_path, "read")
 
     processed_chunks = checkpoint.get('processed_chunks', 0)
@@ -146,7 +152,6 @@ def process_text(file_path: str, nlp: Language, checkpoint_path: str = CHECKPOIN
     return {key: sorted(value) for key, value in entities.items()}
 
 
-
 def generate_annotated_preview(text, modifications):
     pattern = re.compile(r'\b\w+\b(?:[,.]?|\b)|\s+')
     annotated_preview = []
@@ -166,7 +171,7 @@ def generate_annotated_preview(text, modifications):
         word = token.strip(".,;:!? ")
         if word in word_to_identifier:
             replacement = word_to_identifier[word]
-            annotated_preview.append((word, replacement )) if replacement != token else annotated_preview.append(token)
+            annotated_preview.append((word, replacement)) if replacement != token else annotated_preview.append(token)
         else:
             annotated_preview.append(token)
 

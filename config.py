@@ -1,5 +1,5 @@
-import re
 import logging
+import re
 from typing import List, Dict, Any
 
 from pydantic import BaseModel
@@ -7,9 +7,11 @@ from pydantic import BaseModel
 # Setup basic configuration for logging in config module, if not already configured in the main module
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
+
 class EntityTypes(BaseModel):
     PEOPLE: str = "people"
     COMPANIES: str = "companies"
+
 
 # Configuration constants
 DEFAULT_CHUNK_SIZE = 1000
@@ -17,11 +19,11 @@ DEFAULT_CHUNK_OVERLAP = 200
 CHECKPOINT_PATH = 'checkpoint.json'
 OUTPUT_FILE_PATH = 'modified_text.txt'  # Added constant for the default output file path
 
+
 def replace_directly(text: str, replacements: List[Dict[str, str]]) -> str:
     for replacement in replacements:
         text = text.replace(replacement["old"], replacement["new"])
     return text
-
 
 
 def replace_with_regex(text: str, replacements: List[Dict[str, str]]) -> str:
@@ -31,12 +33,14 @@ def replace_with_regex(text: str, replacements: List[Dict[str, str]]) -> str:
         text = re.sub(pattern, repl, text, flags=re.IGNORECASE)
     return text
 
+
 def apply_replacements(text: str, config: Dict[str, Any]) -> str:
     if "direct" in config:
         text = replace_directly(text, config["direct"])
     if "regex" in config:
         text = replace_with_regex(text, config["regex"])
     return text
+
 
 REPLACEMENTS_CONFIG = {}
 

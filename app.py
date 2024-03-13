@@ -1,19 +1,29 @@
 import re
+import subprocess
+import sys
 from typing import Dict
 
-import streamlit as st
-import spacy
-from annotated_text import annotated_text
 import pandas as pd
+import spacy
+import streamlit as st
+from annotated_text import annotated_text
+
 from spacy_extractor import process_text, generate_annotated_preview, anonymize_text, handle_uploaded_file
-import tempfile
+
 st.set_page_config(layout='centered', page_title="Text Anonymizer", page_icon='🔓')
 
 
 @st.cache_resource
 def load_model():
-    """Load the NLP model."""
-    return spacy.load("en_core_web_trf")
+    """Load the NLP model, downloading it if necessary."""
+    model_name = "en_core_web_trf"
+    try:
+        return spacy.load(model_name)
+    except OSError:
+        print(f"{model_name} not found, downloading...")
+        subprocess.check_call([sys.executable, "-m", "spacy", "download", model_name])
+        return spacy.load(model_name)
+
 
 # Initialize tabs
 tab1, tab2, tab3 = st.tabs(["😎 Anonymizing", "🔁 Reverse Anonymization", "ℹ️ Info"])
@@ -29,12 +39,14 @@ with tab1:
         if temp_file_path is None:
             st.error("Failed to process the uploaded file.")
 
-    chunk_size = st.sidebar.slider("Processing Chunk Size (Characters):", min_value=100, max_value=5000, value=1000, step=100)
+    chunk_size = st.sidebar.slider(
+        "Processing Chunk Size (Characters):", min_value=100, max_value=5000, value=1000, step=100
+        )
     processing_percentage = st.sidebar.slider("Text Processing Coverage (%):", 0, 100, 100)
     # Add this line in the tab1 code block, where you define other sliders in the sidebar
     overlap_size = st.sidebar.slider(
-        "Chunk Overlap Size (Characters):", min_value=0, max_value=200, value=0, step=10
-        )
+            "Chunk Overlap Size (Characters):", min_value=0, max_value=200, value=0, step=10
+            )
 
     reset_checkpoint = st.sidebar.checkbox("Reset Processing Checkpoint:")
     keywords = st.sidebar.text_area("Keywords for Anonymization (comma-separated):")
@@ -42,8 +54,8 @@ with tab1:
     custom_replacements = {keyword.strip(): "" for keyword in keywords.split(',') if keyword.strip()}
 
     entity_types = st.sidebar.multiselect(
-        "Target Entity Types for Anonymization:", ["people", "companies"], default=["people", "companies"]
-        )
+            "Target Entity Types for Anonymization:", ["people", "companies"], default=["people", "companies"]
+            )
 
     progress_bar = st.progress(0)
 
@@ -94,8 +106,8 @@ with tab1:
                     with st.container():
                         initial_value = st.session_state['modifications'].get(word, "")
                         user_input = st.text_input(
-                            f"Replacement for '{word}':", value="", key=input_key
-                            )
+                                f"Replacement for '{word}':", value="", key=input_key
+                                )
                         st.session_state['modifications'][word] = user_input
 
     if custom_replacements:
@@ -115,8 +127,8 @@ with tab1:
         st.session_state['entity_types'] = entity_types
 
     preview_percentage = st.slider(
-        'Preview Text Coverage (%):', 0, 100, 5, key='preview_percentage'
-        )
+            'Preview Text Coverage (%):', 0, 100, 5, key='preview_percentage'
+            )
 
     if 'show_preview' in st.session_state and st.session_state.show_preview:
         if 'modifications' in st.session_state and 'uploaded_file_content' in st.session_state:
@@ -137,6 +149,7 @@ def reverse_anonymize_text(text: str, keys: Dict[str, str]) -> str:
             text = re.sub(rf"\b{re.escape(replacement)}\b", original, text)
     return text
 
+
 with tab2:
     st.title("🔁 Reverse Anonymization")
     uploaded_text_file = st.file_uploader("Upload Anonymized Text File:", type=['txt'], key="text_file")
@@ -152,33 +165,35 @@ with tab2:
 
         # Display the reversed text or provide it for download
         st.download_button(
-            label="👇️ Download Reversed Text",
-            data=reversed_text,
-            file_name="reversed_text.txt",
-            mime="text/plain"
-        )
+                label="👇️ Download Reversed Text",
+                data=reversed_text,
+                file_name="reversed_text.txt",
+                mime="text/plain"
+                )
 
         with st.expander("Preview Reversed Text", expanded=True):
             st.text_area("Preview", reversed_text, height=250)
 
 with tab3:
-    st.markdown("""
-### How to Use the Text Anonymizer App
-
-Version: 0.1
-Last Update: Mar, 12, 2024
-
-This Streamlit app anonymizes sensitive information in text documents, focusing on specified entity types like people and companies. Here's a quick guide on how to use it:
-
-1. **Upload a Text File**: Start by uploading the text file you want to anonymize using the file uploader on the "🔧 Main" tab.
-2. **Adjust Settings (Optional)**: Use the sidebar to customize the anonymization process:
-   - **Chunk Size**: Adjust the chunk size for processing the text. The default is 1000 characters.
-   - **Percentage of Text to Process**: Choose what percentage of the text to anonymize.
-   - **Keywords for Replacement**: Enter any specific keywords you want replaced.
-   - **Entity Types**: Select which entity types (e.g., people, companies) you want to focus on.
-3. **Process Text**: Click the "🔄 Process Text" button to start the anonymization. A progress bar will show the process.
-4. **Modify Replacements (Optional)**: After processing, you can manually adjust the replacement values for each identified entity or keyword.
-5. **Preview**: Click the "🔍 Preview" button to see a portion of the anonymized text. Use the slider above the preview button to adjust the percentage of the text shown in the preview.
-6. **Download File**: Once you're satisfied with the preview, click the "⬇️ Download File" button to save the anonymized text.
-
-    """)
+    st.markdown(
+        """
+        ### How to Use the Text Anonymizer App
+        
+        Version: 0.1
+        Last Update: Mar, 12, 2024
+        
+        This Streamlit app anonymizes sensitive information in text documents, focusing on specified entity types like people and companies. Here's a quick guide on how to use it:
+        
+        1. **Upload a Text File**: Start by uploading the text file you want to anonymize using the file uploader on the "🔧 Main" tab.
+        2. **Adjust Settings (Optional)**: Use the sidebar to customize the anonymization process:
+           - **Chunk Size**: Adjust the chunk size for processing the text. The default is 1000 characters.
+           - **Percentage of Text to Process**: Choose what percentage of the text to anonymize.
+           - **Keywords for Replacement**: Enter any specific keywords you want replaced.
+           - **Entity Types**: Select which entity types (e.g., people, companies) you want to focus on.
+        3. **Process Text**: Click the "🔄 Process Text" button to start the anonymization. A progress bar will show the process.
+        4. **Modify Replacements (Optional)**: After processing, you can manually adjust the replacement values for each identified entity or keyword.
+        5. **Preview**: Click the "🔍 Preview" button to see a portion of the anonymized text. Use the slider above the preview button to adjust the percentage of the text shown in the preview.
+        6. **Download File**: Once you're satisfied with the preview, click the "⬇️ Download File" button to save the anonymized text.
+        
+            """
+        )
